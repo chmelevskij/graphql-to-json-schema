@@ -17,13 +17,14 @@ import {
 import { includes } from 'lodash';
 import { isIntrospectionListTypeRef, isNonNullIntrospectionType } from './typeGuards';
 
-export type GraphQLTypeNames = 'String' | 'Int' | 'Float' | 'Boolean';
+export type GraphQLTypeNames = 'String' | 'Int' | 'Float' | 'Boolean' | 'ID';
 
 export const typesMapping: { [k in GraphQLTypeNames]: JSONSchema6TypeName } = {
     'Boolean': 'boolean',
     'String': 'string',
     'Int': 'number',
-    'Float': 'number'
+    'Float': 'number',
+    'ID': 'string',
 };
 
 // Convert a GraphQL Type to a valid JSON Schema type

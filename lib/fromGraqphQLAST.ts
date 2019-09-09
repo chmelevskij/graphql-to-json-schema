@@ -2,11 +2,11 @@
  * This takes in the AST generated from schema language. Examples of that would be
  * the output of `graphql-tag` or similar tools which would parse SDL.
  */
-import { GraphQLSchema, DocumentNode } from 'graphql';
-import { JSONSchema6, JSONSchema6TypeName } from 'json-schema';
-import { typesMapping, GraphQLTypeNames } from './typesMapping';
+import { DocumentNode, VariableDefinitionNode } from 'graphql';
+import { JSONSchema6 } from 'json-schema';
+import {  GraphQLTypeNames, typesMapping } from './typesMapping';
 
-const a: JSONSchema6 = {}
+const a: JSONSchema6 = {};
 
 /**
  * Preliminary implementation for the GraphQL specific schema.
@@ -30,11 +30,8 @@ interface GQLJSONSchema6 extends JSONSchema6 {
 
 export type GraphQLJSONSchema6 = GQLJSONSchema6 | JSONSchema6;
 
-const getVariables = (documentNode: DocumentNode) => {
-    // TODO: need to parse multiple definitions
-    const firstLevel = documentNode.definitions[0];    
+const getVariables = (variableDefinitions: readonly VariableDefinitionNode[]) => {
 
-    if(firstLevel.kind === 'OperationDefinition') {
         const variables: JSONSchema6 = {
             type: 'object',
             required: [],
@@ -42,18 +39,29 @@ const getVariables = (documentNode: DocumentNode) => {
         };
 
         // TODO: start with the primitives
-        if(!firstLevel.variableDefinitions) return false;
-        if(firstLevel.variableDefinitions.length === 0) return false;
+        if (variableDefinitions.length === 0) {
+            return false;
+        }
 
-        const properties = firstLevel.variableDefinitions.reduce<JSONSchema6["properties"]>((acc = {}, v) => { 
+        const properties = variableDefinitions.reduce<JSONSchema6['properties']>((acc = {}, v) => { 
             switch (v.type.kind) {
                 case 'NamedType':
-                    acc[`$${v.variable.name.value}`] = { type: typesMapping[<GraphQLTypeNames>v.type.name.value]};
+                    acc[`$${v.variable.name.value}`] = {
+                      type: typesMapping[<GraphQLTypeNames> v.type.name.value]
+                    };
                     return acc;
                 case 'ListType':
                     return acc;
                 case 'NonNullType':
-                    // TODO: this will be required part
+                    if (v.type.type.kind === 'NamedType') {
+                        acc[`$${v.variable.name.value}`] = {
+                          type:
+                            typesMapping[
+                              <GraphQLTypeNames> v.type.type.name.value
+                            ]
+                        };
+                    }
+                    variables.required!.push(`$${v.variable.name.value}`);
                     return acc;
                 default:
                     const exhaustive: never = v.type;
@@ -63,18 +71,41 @@ const getVariables = (documentNode: DocumentNode) => {
 
         variables.properties = properties;
         return variables;
-    }
-    return {}
 };
     
-export const fromGraphQLAST = (documentNode: DocumentNode): GraphQLJSONSchema6 => {
-    // TODO: implement.
+/**
+ * Given `DocumentNode` used in client generate schema. 
+ * @param documentNode parsed graphql query or mutation from SDL
+ */
+export const fromOperationAST = (
+  documentNode: DocumentNode
+): GraphQLJSONSchema6 => {
+  const ASTNode = documentNode.definitions[0];
+
+  // name can be undefined. Since graphql supports unnamed ones
+  if (ASTNode.kind === 'OperationDefinition' && ASTNode.name) {
+    const name = ASTNode.name.value;
+    let variables  = {};
+    if (ASTNode.variableDefinitions) {
+        variables = getVariables(ASTNode.variableDefinitions);
+    }
+    
     return {
-        $schema: 'http://json-schema.org/draft-06/schema#',
-        properties: {
-            variables: getVariables(documentNode),
+      $schema: 'http://json-schema.org/draft-06/schema#',
+      properties: {},
+      definitions: {
+        [name]: {
+          type: 'object',
+          properties: {
+            variables,
             selections: false
-        },
-        definitions: {},
+          }
+        }
+      }
     };
+  }
+
+  throw new Error('Please provide named Operation query');
+
+  // TODO: implement.
 };

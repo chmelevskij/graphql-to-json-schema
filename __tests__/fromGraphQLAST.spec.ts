@@ -1,6 +1,6 @@
 import { parse } from 'graphql/language/parser';
 import { JSONSchema6 } from 'json-schema';
-import { fromGraphQLAST, GraphQLJSONSchema6 } from '../lib/fromGraqphQLAST';
+import { fromOperationAST, GraphQLJSONSchema6 } from '../lib/fromGraqphQLAST';
 
 /**
  * There are 2 main approaches to structuring the corresponding schema:
@@ -381,31 +381,6 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
     }
  };
 
-const primitivesVariables = `
-mutation removeRecipe($a: String, $b: Int, $c: Float, $d: Boolean, $e: ID){
-  miau
-}
-`;
-
-const primitivesVariablesSchema: GraphQLJSONSchema6 = {
-    $schema: 'http://json-schema.org/draft-06/schema#',
-    properties: {
-        variables: {
-            type: 'object',
-            properties: {
-                $a: { type: 'string' },
-                $b: { type: 'number' },
-                $c: { type: 'number' },
-                $d: { type: 'boolean' },
-                $e: { type: 'string' },
-            },
-            additionalProperties: false,
-            required: [],
-        },
-        selections: false,
-    },
-    definitions: {},
-}
 
 // TODO: need to parse default variables as well.
 
@@ -415,18 +390,89 @@ import * as ajv from 'ajv';
 
 
 describe('fromGraphQLAST', () => {
-    test.only('parses the primitive variables', () => {
+    test.skip('parses the primitive variables', () => {
+
+        const primitivesVariables = `
+        mutation removeRecipe($a: String, $b: Int, $c: Float, $d: Boolean, $e: ID){
+            miau
+        }
+        `;
+
+        const primitivesVariablesSchema: GraphQLJSONSchema6 = {
+            $schema: "http://json-schema.org/draft-06/schema#",
+            definitions: {
+                removeRecipe: {
+                type: 'object',
+                properties: {
+                    variables: {
+                        type: 'object',
+                        properties: {
+                            $a: { type: 'string' },
+                            $b: { type: 'number' },
+                            $c: { type: 'number' },
+                            $d: { type: 'boolean' },
+                            $e: { type: 'string' }
+                        },
+                        additionalProperties: false,
+                        required: []
+                    },
+                    selections: false
+                }
+                }
+            }
+        };
 
         const ast = parse(primitivesVariables);
-        const result = fromGraphQLAST(ast);
+        const result = fromOperationAST(ast);
         expect(result).toMatchObject(primitivesVariablesSchema);
         const validator = new ajv();
         validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
         expect(validator.validateSchema(result)).toBe(true);
     });
+
+    test.only('parses the primitive variables with required variables', () => {
+
+        const primitivesVariables = `
+        mutation removeRecipe($a: String!, $b: Int!, $c: Float!, $d: Boolean!, $e: ID!){
+            miau
+        }
+        `;
+
+        const primitivesVariablesSchema: GraphQLJSONSchema6 = {
+            $schema: "http://json-schema.org/draft-06/schema#",
+            definitions: {
+                removeRecipe: {
+                    type: 'object',
+                    properties: {
+                        variables: {
+                            type: 'object',
+                            properties: {
+                                $a: { type: 'string' },
+                                $b: { type: 'number' },
+                                $c: { type: 'number' },
+                                $d: { type: 'boolean' },
+                                $e: { type: 'string' }
+                            },
+                            additionalProperties: false,
+                            required: [ '$a', '$b', '$c', '$d', '$e' ],
+                        },
+                        selections: false
+                    }
+                }
+            }
+        };
+
+        const ast = parse(primitivesVariables);
+        const result = fromOperationAST(ast);
+        expect(result).toMatchObject(primitivesVariablesSchema);
+        const validator = new ajv();
+        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+        expect(validator.validateSchema(result)).toBe(true);
+    });
+
     test.skip('parses without the variable', () => {
         const ast = parse(mutation2);
-        const result = fromGraphQLAST(ast);
+        const result = fromOperationAST(ast);
         expect(result).toMatchObject(mutation2Schema);
         const validator = new ajv();
         validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));

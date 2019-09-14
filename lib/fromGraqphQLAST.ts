@@ -2,7 +2,7 @@
  * This takes in the AST generated from schema language. Examples of that would be
  * the output of `graphql-tag` or similar tools which would parse SDL.
  */
-import { DocumentNode, VariableDefinitionNode } from 'graphql';
+import { DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode } from 'graphql';
 import { JSONSchema6 } from 'json-schema';
 import {  GraphQLTypeNames, typesMapping } from './typesMapping';
 
@@ -18,19 +18,19 @@ interface GQLJSONSchema6 extends JSONSchema6 {
     properties?: {
         [k: string]: boolean | GraphQLJSONSchema6 | JSONSchema6;
         variables: boolean | GraphQLJSONSchema6 | JSONSchema6;
-        selections: boolean | GraphQLJSONSchema6 | JSONSchema6;
+        selections: GraphQLJSONSchema6 | JSONSchema6;
 
         arguments: boolean | GraphQLJSONSchema6 | JSONSchema6;
         return: boolean | GraphQLJSONSchema6 | JSONSchema6; // TODO: this is defined as `type` in AST
-    },
+    };
     definitions?: {
         [k: string]: boolean | GraphQLJSONSchema6 | JSONSchema6;
-    }
+    };
 }
 
 export type GraphQLJSONSchema6 = GQLJSONSchema6 | JSONSchema6;
 
-const getVariables = (variableDefinitions: readonly VariableDefinitionNode[]) => {
+function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
 
         const variables: JSONSchema6 = {
             type: 'object',
@@ -45,6 +45,7 @@ const getVariables = (variableDefinitions: readonly VariableDefinitionNode[]) =>
 
         const properties = variableDefinitions.reduce<JSONSchema6['properties']>((acc = {}, v) => { 
             switch (v.type.kind) {
+              // TODO: rescursive search for definitions
                 case 'NamedType':
                     acc[`$${v.variable.name.value}`] = {
                       type: typesMapping[<GraphQLTypeNames> v.type.name.value]
@@ -67,12 +68,56 @@ const getVariables = (variableDefinitions: readonly VariableDefinitionNode[]) =>
                     const exhaustive: never = v.type;
                     return exhaustive;
             }
-        }, {});
+        },                                                                       {});
 
         variables.properties = properties;
         return variables;
-};
-    
+}
+
+function getSelectionProperties(selectionSet: SelectionSetNode, schemaMemo: any): any {
+  if (selectionSet.selections.length === 0) { 
+    return {};
+  }
+
+  return selectionSet.selections.reduce((acc, selection) => {
+    switch (selection.kind) {
+      case 'Field':
+        if (selection.selectionSet) {
+          return getSelectionProperties(selection.selectionSet, acc);
+        } else {
+          acc[selection.name.value] = {};
+          return acc;
+        }
+      case 'FragmentSpread':
+        return {};
+      case 'InlineFragment':
+        return {};
+      default:
+        return {};
+    }
+  },                                    schemaMemo);
+}
+
+function getSelections(selectionSet: SelectionSetNode) {
+  const selections: JSONSchema6 = {
+      type: 'object',
+      properties: { },
+      required: [],
+      additionalProperties: false,
+  };
+
+  if (selectionSet.selections.length === 0) {
+    return selections;
+  }
+
+  const properties = getSelectionProperties(selectionSet, {});
+
+  return {
+    ...selections,
+    properties,
+  };
+
+}
 /**
  * Given `DocumentNode` used in client generate schema. 
  * @param documentNode parsed graphql query or mutation from SDL
@@ -89,6 +134,8 @@ export const fromOperationAST = (
     if (ASTNode.variableDefinitions) {
         variables = getVariables(ASTNode.variableDefinitions);
     }
+
+    const selections = getSelections(ASTNode.selectionSet) as any; // TODO
     
     return {
       $schema: 'http://json-schema.org/draft-06/schema#',
@@ -98,8 +145,9 @@ export const fromOperationAST = (
           type: 'object',
           properties: {
             variables,
-            selections: false
-          }
+            selections, // TODO: this matches anything atm
+          },
+          additionalProperties: false,
         }
       }
     };

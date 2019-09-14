@@ -134,7 +134,7 @@ const mutation1Schema: JSONSchema6 = {
             }
         }
     }
-}
+};
 
 const mutation2 = `
 mutation removeRecipe {
@@ -169,7 +169,7 @@ const mutation2Schema: GraphQLJSONSchema6 =  {
                                         arguments: {
                                             type: 'object',
                                             properties: {
-                                                id: { type: 'string', default: "1" }
+                                                id: { type: 'string', default: '1' }
                                             },
                                             required: [],
                                         }
@@ -183,7 +183,7 @@ const mutation2Schema: GraphQLJSONSchema6 =  {
         },
     },
     definitions: {},
-}
+};
 
 const mutation3 = `
 mutation addRecipe{
@@ -238,7 +238,7 @@ const mutation3Schema: JSONSchema6 = {
         },
     },
     definitions: {},
-}
+};
 
 /**
  * When variables are used they are passed in into the mutation.
@@ -246,7 +246,7 @@ const mutation3Schema: JSONSchema6 = {
  * we would know the types already. What we are actually interested in is the reference from
  * mutation arguments to the client query variables. Does JSONSchema support that?
  */
-var query = `query RollDice($dice: Int!, $sides: Int) {
+let query = `query RollDice($dice: Int!, $sides: Int) {
   rollDice(numDice: $dice, numSides: $sides)
 }`;
 
@@ -285,11 +285,11 @@ const querySchema: JSONSchema6 = {
         $dice: { type: 'integer' },
         $sides: { type: 'integer' },
     },
-}
+};
 
 const mutationWithReservedSchemaWords = `mutation someMutation($id: Int, $schema: SomeType, $ref: String!) {
    createSomething(id: $id, schema: $schema, ref: $ref)
-}`
+}`;
 
 /**
  * in regards of the keywords,  this seem to validate just find with the reserved keywords.
@@ -299,13 +299,13 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
     $schema: 'http://json-schema.org/draft-06/schema#',
     properties: {
         variables: {
-            type:'object',
+            type: 'object',
             properties: {
                 $id: { $ref: '#/definitions/$id' },
                 $schema: { $ref: '#/definitions/$schema'},
                 $ref: { $ref: '#/definitions/$ref' },
             },
-            required: ["$ref"]
+            required: ['$ref']
         },
         selections: {
             type: 'object',
@@ -340,13 +340,13 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
  * Another option for work with variables is assigning $id to the definition and using that.
  */
 
- const mutatoinWithId = `
+const mutatoinWithId = `
  mutation WithID($name: String) {
      hello(name: $name)
  }
  `;
 
- const mutatoinWithIdSchema: JSONSchema6 = {
+const mutatoinWithIdSchema: JSONSchema6 = {
     $schema: 'http://json-schema.org/draft-06/schema#',
     type: 'object',
     properties: {
@@ -381,16 +381,14 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
     }
  };
 
-
 // TODO: need to parse default variables as well.
 
 const printJSON = (v: any) => console.log(JSON.stringify(v, null, 2));
 
 import * as ajv from 'ajv';
 
-
 describe('fromGraphQLAST', () => {
-    test.skip('parses the primitive variables', () => {
+    test('parses the primitive variables', () => {
 
         const primitivesVariables = `
         mutation removeRecipe($a: String, $b: Int, $c: Float, $d: Boolean, $e: ID){
@@ -399,7 +397,7 @@ describe('fromGraphQLAST', () => {
         `;
 
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
-            $schema: "http://json-schema.org/draft-06/schema#",
+            $schema: 'http://json-schema.org/draft-06/schema#',
             definitions: {
                 removeRecipe: {
                 type: 'object',
@@ -416,7 +414,8 @@ describe('fromGraphQLAST', () => {
                         additionalProperties: false,
                         required: []
                     },
-                    selections: false
+                    // TODO: match selection
+                    selections: true
                 }
                 }
             }
@@ -430,7 +429,7 @@ describe('fromGraphQLAST', () => {
         expect(validator.validateSchema(result)).toBe(true);
     });
 
-    test.only('parses the primitive variables with required variables', () => {
+    test('parses the primitive variables with required variables', () => {
 
         const primitivesVariables = `
         mutation removeRecipe($a: String!, $b: Int!, $c: Float!, $d: Boolean!, $e: ID!){
@@ -439,7 +438,7 @@ describe('fromGraphQLAST', () => {
         `;
 
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
-            $schema: "http://json-schema.org/draft-06/schema#",
+            $schema: 'http://json-schema.org/draft-06/schema#',
             definitions: {
                 removeRecipe: {
                     type: 'object',
@@ -456,7 +455,8 @@ describe('fromGraphQLAST', () => {
                             additionalProperties: false,
                             required: [ '$a', '$b', '$c', '$d', '$e' ],
                         },
-                        selections: false
+                        // TODO: match selection
+                        selections: true,
                     }
                 }
             }
@@ -465,6 +465,42 @@ describe('fromGraphQLAST', () => {
         const ast = parse(primitivesVariables);
         const result = fromOperationAST(ast);
         expect(result).toMatchObject(primitivesVariablesSchema);
+        const validator = new ajv();
+        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+        expect(validator.validateSchema(result)).toBe(true);
+    });
+
+    test.only('Parses selections without definitions', () => {
+        const simpleSelection = `
+            mutation A {
+                b
+            }
+        `;
+
+        const simpleSelectionSchema: GraphQLJSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                A: {
+                    type: 'object',
+                    properties: {
+                        variables: false,
+                        // TODO: match selection
+                        selections: {
+                            type: 'object',
+                            properties: {
+                                b: {},
+                            },
+                            additionalProperties: false,
+                        }
+                    },
+                    additionalProperties: false,
+                }
+            }
+        };
+
+        const ast = parse(simpleSelection);
+        const result = fromOperationAST(ast);
+        expect(result).toMatchObject(simpleSelectionSchema);
         const validator = new ajv();
         validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
         expect(validator.validateSchema(result)).toBe(true);

@@ -396,6 +396,14 @@ describe('fromGraphQLAST', () => {
         }
         `;
 
+        /**
+         * the end result will be put in definitions, because it will have to be merged
+         * with the rest of the schema.
+         * NOTE: GraphQL, `Document` has `ExecutableDefinition`, `TypeSystemDefinition` fields
+         * current implementation only understands `TypeSystemDefinition`, and treats that as top level schema.
+         * this should be fixed and top level should have operations and schema `properties` at the top
+         * this could also work by referencing every serparately.
+         */
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
             definitions: {
@@ -414,8 +422,13 @@ describe('fromGraphQLAST', () => {
                         additionalProperties: false,
                         required: []
                     },
-                    // TODO: match selection
-                    selections: true
+                    selections: {
+                        type: 'object',
+                        properties: {
+                            miau: {},
+                        },
+                        additionalProperties: false,
+                    }
                 }
                 }
             }
@@ -455,8 +468,13 @@ describe('fromGraphQLAST', () => {
                             additionalProperties: false,
                             required: [ '$a', '$b', '$c', '$d', '$e' ],
                         },
-                        // TODO: match selection
-                        selections: true,
+                        selections: {
+                            type: 'object',
+                            properties: {
+                                miau: {},
+                            },
+                            additionalProperties: false,
+                        }
                     }
                 }
             }
@@ -470,7 +488,7 @@ describe('fromGraphQLAST', () => {
         expect(validator.validateSchema(result)).toBe(true);
     });
 
-    test.only('Parses selections without definitions', () => {
+    test('Parses selections without definitions', () => {
         const simpleSelection = `
             mutation A {
                 b
@@ -489,6 +507,58 @@ describe('fromGraphQLAST', () => {
                             type: 'object',
                             properties: {
                                 b: {},
+                            },
+                            additionalProperties: false,
+                        }
+                    },
+                    additionalProperties: false,
+                }
+            }
+        };
+
+        const ast = parse(simpleSelection);
+        const result = fromOperationAST(ast);
+        expect(result).toMatchObject(simpleSelectionSchema);
+        const validator = new ajv();
+        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+        expect(validator.validateSchema(result)).toBe(true);
+    });
+
+    test('Nested selections recursivelly', () => {
+        const simpleSelection = `
+            mutation A {
+                b {
+                    c {
+                        d
+                    }
+                }
+            }
+        `;
+
+        const simpleSelectionSchema: GraphQLJSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                A: {
+                    type: 'object',
+                    properties: {
+                        variables: false,
+                        // TODO: match selection
+                        selections: {
+                            type: 'object',
+                            properties: {
+                                b: {
+                                    type: 'object',
+                                    properties: {
+                                        c: {
+                                            type: 'object',
+                                            properties: {
+                                                d: {}
+                                            },
+                                            additionalProperties: false,
+                                        }
+                                    },
+                                    additionalProperties: false,
+                                },
                             },
                             additionalProperties: false,
                         }

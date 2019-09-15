@@ -74,30 +74,38 @@ function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
   return variables;
 }
 
-function getSelectionProperties(selectionSet: SelectionSetNode, schemaMemo: any = {}): any {
+function getSelectionTree(selectionSet: SelectionSetNode, schemaMemo: any = {}): any {
   return selectionSet.selections.reduce((acc, selection) => {
     switch (selection.kind) {
       case 'Field':
         if (selection.selectionSet) {
           acc[selection.name.value] = {
             type: 'object',
-            properties: getSelectionProperties(selection.selectionSet),
-            required: [],
             additionalProperties: false,
+            required: [],
+            properties: {
+              selections: {
+                type: 'object',
+                additionalProperties: false,
+                required: [],
+                properties: {
+                  ...getSelectionTree(selection.selectionSet)
+                }
+              }
+            },
           }
-          return acc;
         } else {
-          acc[selection.name.value] = {};
-          return acc;
+          acc[selection.name.value] = {}
         }
+        return acc;
       case 'FragmentSpread':
         console.warn('FragmentSpread parsing not yet implemented')
-        return {};
+        return acc;
       case 'InlineFragment':
         console.warn('InlineFragment parsing not yet implemented')
-        return {};
+        return acc;
       default:
-        return {};
+        return acc;
     }
   }, schemaMemo);
 }
@@ -114,7 +122,7 @@ function getSelections(selectionSet: SelectionSetNode) {
     return selections;
   }
 
-  const properties = getSelectionProperties(selectionSet);
+  const properties = getSelectionTree(selectionSet);
 
   return {
     ...selections,

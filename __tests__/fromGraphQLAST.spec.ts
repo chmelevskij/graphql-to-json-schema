@@ -143,10 +143,10 @@ mutation removeRecipe {
 `;
 
 // TODO: what needs to be done with missing properties?
-const mutation2Schema: GraphQLJSONSchema6 =  {
+const mutation2Schema: GraphQLJSONSchema6 = {
     $schema: 'http://json-schema.org/draft-06/schema#',
     properties: {
-        variables: { },
+        variables: {},
         selections: {
             type: 'object',
             properties: {
@@ -302,7 +302,7 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
             type: 'object',
             properties: {
                 $id: { $ref: '#/definitions/$id' },
-                $schema: { $ref: '#/definitions/$schema'},
+                $schema: { $ref: '#/definitions/$schema' },
                 $ref: { $ref: '#/definitions/$ref' },
             },
             required: ['$ref']
@@ -319,7 +319,7 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
                             type: 'object',
                             properties: {
                                 id: { $ref: '#/definitions/$id' },
-                                schema: { $ref: '#/definitions/$schema'},
+                                schema: { $ref: '#/definitions/$schema' },
                                 ref: { $ref: '#/definitions/$ref' },
                             },
                             additionalProperties: false,
@@ -331,7 +331,7 @@ const mutationWithReservedSchemaWordsSchema: JSONSchema6 = {
     },
     definitions: {
         $id: { type: 'integer' },
-        $schema: { $ref: '#/some/link/to/schema'},
+        $schema: { $ref: '#/some/link/to/schema' },
         $ref: { type: 'string' },
     },
 };
@@ -379,7 +379,7 @@ const mutatoinWithIdSchema: JSONSchema6 = {
             }
         }
     }
- };
+};
 
 // TODO: need to parse default variables as well.
 
@@ -408,28 +408,28 @@ describe('fromGraphQLAST', () => {
             $schema: 'http://json-schema.org/draft-06/schema#',
             definitions: {
                 removeRecipe: {
-                type: 'object',
-                properties: {
-                    variables: {
-                        type: 'object',
-                        properties: {
-                            $a: { type: 'string' },
-                            $b: { type: 'number' },
-                            $c: { type: 'number' },
-                            $d: { type: 'boolean' },
-                            $e: { type: 'string' }
+                    type: 'object',
+                    properties: {
+                        variables: {
+                            type: 'object',
+                            properties: {
+                                $a: { type: 'string' },
+                                $b: { type: 'number' },
+                                $c: { type: 'number' },
+                                $d: { type: 'boolean' },
+                                $e: { type: 'string' }
+                            },
+                            additionalProperties: false,
+                            required: []
                         },
-                        additionalProperties: false,
-                        required: []
-                    },
-                    selections: {
-                        type: 'object',
-                        properties: {
-                            miau: {},
-                        },
-                        additionalProperties: false,
+                        selections: {
+                            type: 'object',
+                            properties: {
+                                miau: {},
+                            },
+                            additionalProperties: false,
+                        }
                     }
-                }
                 }
             }
         };
@@ -466,7 +466,7 @@ describe('fromGraphQLAST', () => {
                                 $e: { type: 'string' }
                             },
                             additionalProperties: false,
-                            required: [ '$a', '$b', '$c', '$d', '$e' ],
+                            required: ['$a', '$b', '$c', '$d', '$e'],
                         },
                         selections: {
                             type: 'object',
@@ -542,25 +542,41 @@ describe('fromGraphQLAST', () => {
                     type: 'object',
                     properties: {
                         variables: false,
-                        // TODO: match selection
                         selections: {
                             type: 'object',
+                            additionalProperties: false,
+                            required: [],
                             properties: {
                                 b: {
                                     type: 'object',
-                                    properties: {
-                                        c: {
-                                            type: 'object',
-                                            properties: {
-                                                d: {}
-                                            },
-                                            additionalProperties: false,
-                                        }
-                                    },
+                                    required: [],
                                     additionalProperties: false,
+                                    properties: {
+                                        selections: {
+                                            type: 'object',
+                                            required: [],
+                                            additionalProperties: false,
+                                            properties: {
+                                                c: {
+                                                    type: 'object',
+                                                    required: [],
+                                                    additionalProperties: false,
+                                                    properties: {
+                                                        selections: {
+                                                            type: 'object',
+                                                            required: [],
+                                                            additionalProperties: false,
+                                                            properties: {
+                                                                d: {},
+                                                            },
+                                                        },
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    },
                                 },
                             },
-                            additionalProperties: false,
                         }
                     },
                     additionalProperties: false,
@@ -576,10 +592,168 @@ describe('fromGraphQLAST', () => {
         expect(validator.validateSchema(result)).toBe(true);
     });
 
-    test.skip('parses without the variable', () => {
-        const ast = parse(mutation2);
+    test('Multiple Nested selections recursivelly', () => {
+        const simpleSelection = `
+            mutation A {
+                b {
+                    c {
+                        d
+                    }
+                }
+                x {
+                    y {
+                        z
+                        q
+                    }
+                }
+            }
+        `;
+
+        const simpleSelectionSchema: GraphQLJSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                A: {
+                    type: 'object',
+                    additionalProperties: false,
+                    properties: {
+                        variables: false,
+                        // TODO: match selection
+                        selections: {
+                            type: 'object',
+                            additionalProperties: false,
+                            required: [],
+                            properties: {
+                                b: {
+                                    type: 'object',
+                                    additionalProperties: false,
+                                    required: [],
+                                    properties: {
+                                        selections: {
+                                            type: 'object',
+                                            additionalProperties: false,
+                                            required: [],
+                                            properties: {
+                                                c: {
+                                                    type: 'object',
+                                                    additionalProperties: false,
+                                                    required: [],
+                                                    properties: {
+                                                        selections: {
+                                                            type: 'object',
+                                                            additionalProperties: false,
+                                                            required: [],
+                                                            properties: {
+                                                                d: {}
+                                                            }
+                                                        }
+                                                    },
+                                                }
+                                            },
+                                        },
+                                    },
+                                },
+                                x: {
+                                    type: 'object',
+                                    additionalProperties: false,
+                                    required: [],
+                                    properties: {
+                                        selections: {
+                                            type: 'object',
+                                            additionalProperties: false,
+                                            required: [],
+                                            properties: {
+                                                y: {
+                                                    type: 'object',
+                                                    additionalProperties: false,
+                                                    required: [],
+                                                    properties: {
+                                                        selections: {
+                                                            type: 'object',
+                                                            additionalProperties: false,
+                                                            required: [],
+                                                            properties: {
+                                                                z: {},
+                                                                q: {}
+                                                            }
+                                                        },
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                },
+                            },
+                        }
+                    },
+                }
+            }
+        };
+
+        const ast = parse(simpleSelection);
         const result = fromOperationAST(ast);
-        expect(result).toMatchObject(mutation2Schema);
+        expect(result).toMatchObject(simpleSelectionSchema);
+        const validator = new ajv();
+        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+        expect(validator.validateSchema(result)).toBe(true);
+    });
+
+    test.skip('uses variable references in arguments', () => {
+
+        const primitivesVariables = `
+        mutation removeRecipe($a: String, $b: Int, $c: Float, $d: Boolean, $e: ID){
+            miau(a: $a, b: $b, c: $c, d: $d, e: $e)
+        }
+        `;
+
+        const primitivesVariablesSchema: GraphQLJSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                removeRecipe: {
+                    type: 'object',
+                    properties: {
+                        variables: {
+                            type: 'object',
+                            properties: {
+                                $a: { type: 'string' },
+                                $b: { type: 'number' },
+                                $c: { type: 'number' },
+                                $d: { type: 'boolean' },
+                                $e: { type: 'string' }
+                            },
+                            additionalProperties: false,
+                            required: []
+                        },
+                        selections: {
+                            type: 'object',
+                            properties: {
+                                miau: {
+                                    type: "object",
+                                    properties: {
+                                        arguments: {
+                                            type: "object",
+                                            properties: {
+                                                a: { "$ref": "#/definitions/removeRecipe/properties/variables/properties/$a" },
+                                                b: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$b' },
+                                                c: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$c' },
+                                                d: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$d' },
+                                                e: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$e' }
+                                            },
+                                            additionalProperties: false
+                                        }
+                                    }
+
+                                },
+                            },
+                            additionalProperties: false,
+                        }
+                    }
+                }
+            }
+        };
+
+        const ast = parse(primitivesVariables);
+        const result = fromOperationAST(ast);
+        expect(result).toMatchObject(primitivesVariablesSchema);
         const validator = new ajv();
         validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
         expect(validator.validateSchema(result)).toBe(true);

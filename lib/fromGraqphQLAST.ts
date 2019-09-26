@@ -2,7 +2,7 @@
  * This takes in the AST generated from schema language. Examples of that would be
  * the output of `graphql-tag` or similar tools which would parse SDL.
  */
-import { DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode } from 'graphql';
+import { DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode, ArgumentNode } from 'graphql';
 import { JSONSchema6 } from 'json-schema';
 import { GraphQLTypeNames, typesMapping } from './typesMapping';
 
@@ -79,29 +79,69 @@ function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
   return variables;
 }
 
+interface Args {
+  args: ReadonlyArray<ArgumentNode>;
+  name: string;
+}
+
+function getArgs({ args, name }: Args) {
+  const argObject: JSONSchema6 = {
+    type: 'object',
+    properties: {},
+    required: [],
+    additionalProperties: false,
+  };
+
+  const properties = args.reduce((acc, { value , name: argName }) => {
+    if(value.kind === 'Variable' ) {
+      acc[argName.value] = { "$ref": `#/definitions/${name}/properties/variables/properties/$${value.name.value}` }
+    }
+    return acc;
+  }, {} as any)
+
+  argObject.properties = properties;
+  return argObject;
+}
+
 function getSelectionTree({ selectionSet, name }: NamedMemo, schemaMemo: any = {}): any {
   return selectionSet.selections.reduce((acc, selection) => {
     switch (selection.kind) {
       case 'Field':
+        let result = {};
+        if (!selection.selectionSet && (selection.arguments && selection.arguments.length === 0)) {
+          acc[selection.name.value] = result
+          return acc;
+        }
+
+
+        let args = {};
+        let selections = {};
+
+        if (selection.arguments && selection.arguments.length > 0) {
+          args = getArgs({ name, args: selection.arguments });
+        }
+
         if (selection.selectionSet) {
-          acc[selection.name.value] = {
+          selections = {
             type: 'object',
             additionalProperties: false,
             required: [],
             properties: {
-              selections: {
-                type: 'object',
-                additionalProperties: false,
-                required: [],
-                properties: {
-                ...getSelectionTree({selectionSet: selection.selectionSet, name })
-                }
-              }
-            },
+              ...getSelectionTree({ selectionSet: selection.selectionSet, name })
+            }
           }
-        } else {
-          acc[selection.name.value] = {}
         }
+
+        acc[selection.name.value] = {
+          type: 'object',
+          additionalProperties: false,
+          required: [],
+          properties: {
+            selections,
+            arguments: args,
+          }
+        }
+
         return acc;
       case 'FragmentSpread':
         console.warn('FragmentSpread parsing not yet implemented')

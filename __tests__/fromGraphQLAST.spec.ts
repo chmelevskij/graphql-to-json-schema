@@ -697,7 +697,7 @@ describe('fromGraphQLAST', () => {
         expect(validator.validateSchema(result)).toBe(true);
     });
 
-    test.skip('uses variable references in arguments', () => {
+    test('uses variable references in arguments', () => {
 
         const primitivesVariables = `
         mutation removeRecipe($a: String, $b: Int, $c: Float, $d: Boolean, $e: ID){

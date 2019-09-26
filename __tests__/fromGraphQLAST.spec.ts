@@ -387,6 +387,15 @@ const printJSON = (v: any) => console.log(JSON.stringify(v, null, 2));
 
 import * as ajv from 'ajv';
 
+function runTest(sdl: string, expectedSchema: JSONSchema6) {
+    const ast = parse(sdl);
+    const result = fromOperationAST(ast);
+    expect(result).toMatchObject(expectedSchema);
+    const validator = new ajv();
+    validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+    expect(validator.validateSchema(result)).toBe(true);
+}
+
 describe('fromGraphQLAST', () => {
     test('parses the primitive variables', () => {
 
@@ -434,12 +443,7 @@ describe('fromGraphQLAST', () => {
             }
         };
 
-        const ast = parse(primitivesVariables);
-        const result = fromOperationAST(ast);
-        expect(result).toMatchObject(primitivesVariablesSchema);
-        const validator = new ajv();
-        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
-        expect(validator.validateSchema(result)).toBe(true);
+        runTest(primitivesVariables, primitivesVariablesSchema)
     });
 
     test('parses the primitive variables with required variables', () => {
@@ -480,12 +484,7 @@ describe('fromGraphQLAST', () => {
             }
         };
 
-        const ast = parse(primitivesVariables);
-        const result = fromOperationAST(ast);
-        expect(result).toMatchObject(primitivesVariablesSchema);
-        const validator = new ajv();
-        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
-        expect(validator.validateSchema(result)).toBe(true);
+        runTest(primitivesVariables, primitivesVariablesSchema)
     });
 
     test('Parses selections without definitions', () => {
@@ -516,12 +515,7 @@ describe('fromGraphQLAST', () => {
             }
         };
 
-        const ast = parse(simpleSelection);
-        const result = fromOperationAST(ast);
-        expect(result).toMatchObject(simpleSelectionSchema);
-        const validator = new ajv();
-        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
-        expect(validator.validateSchema(result)).toBe(true);
+        runTest(simpleSelection, simpleSelectionSchema);
     });
 
     test('Nested selections recursivelly', () => {
@@ -584,12 +578,7 @@ describe('fromGraphQLAST', () => {
             }
         };
 
-        const ast = parse(simpleSelection);
-        const result = fromOperationAST(ast);
-        expect(result).toMatchObject(simpleSelectionSchema);
-        const validator = new ajv();
-        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
-        expect(validator.validateSchema(result)).toBe(true);
+        runTest(simpleSelection, simpleSelectionSchema)
     });
 
     test('Multiple Nested selections recursivelly', () => {
@@ -689,12 +678,7 @@ describe('fromGraphQLAST', () => {
             }
         };
 
-        const ast = parse(simpleSelection);
-        const result = fromOperationAST(ast);
-        expect(result).toMatchObject(simpleSelectionSchema);
-        const validator = new ajv();
-        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
-        expect(validator.validateSchema(result)).toBe(true);
+        runTest(simpleSelection, simpleSelectionSchema)
     });
 
     test('uses variable references in arguments', () => {
@@ -751,11 +735,6 @@ describe('fromGraphQLAST', () => {
             }
         };
 
-        const ast = parse(primitivesVariables);
-        const result = fromOperationAST(ast);
-        expect(result).toMatchObject(primitivesVariablesSchema);
-        const validator = new ajv();
-        validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
-        expect(validator.validateSchema(result)).toBe(true);
+        runTest(primitivesVariables, primitivesVariablesSchema)
     });
 });

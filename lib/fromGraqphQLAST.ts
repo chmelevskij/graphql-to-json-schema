@@ -30,6 +30,11 @@ interface GQLJSONSchema6 extends JSONSchema6 {
 
 export type GraphQLJSONSchema6 = GQLJSONSchema6 | JSONSchema6;
 
+interface NamedMemo {
+  name: string;
+  selectionSet: SelectionSetNode;
+}
+
 function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
 
   const variables: JSONSchema6 = {
@@ -74,7 +79,7 @@ function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
   return variables;
 }
 
-function getSelectionTree(selectionSet: SelectionSetNode, schemaMemo: any = {}): any {
+function getSelectionTree({ selectionSet, name }: NamedMemo, schemaMemo: any = {}): any {
   return selectionSet.selections.reduce((acc, selection) => {
     switch (selection.kind) {
       case 'Field':
@@ -89,7 +94,7 @@ function getSelectionTree(selectionSet: SelectionSetNode, schemaMemo: any = {}):
                 additionalProperties: false,
                 required: [],
                 properties: {
-                  ...getSelectionTree(selection.selectionSet)
+                ...getSelectionTree({selectionSet: selection.selectionSet, name })
                 }
               }
             },
@@ -110,7 +115,7 @@ function getSelectionTree(selectionSet: SelectionSetNode, schemaMemo: any = {}):
   }, schemaMemo);
 }
 
-function getSelections(selectionSet: SelectionSetNode) {
+function getSelections({ selectionSet, name }: NamedMemo) {
   const selections: JSONSchema6 = {
     type: 'object',
     properties: {},
@@ -122,7 +127,7 @@ function getSelections(selectionSet: SelectionSetNode) {
     return selections;
   }
 
-  const properties = getSelectionTree(selectionSet);
+  const properties = getSelectionTree({ selectionSet, name });
 
   return {
     ...selections,
@@ -147,7 +152,7 @@ export const fromOperationAST = (
       variables = getVariables(ASTNode.variableDefinitions);
     }
 
-    const selections = getSelections(ASTNode.selectionSet);
+    const selections = getSelections({ selectionSet: ASTNode.selectionSet, name });
 
     return {
       $schema: 'http://json-schema.org/draft-06/schema#',
@@ -166,6 +171,4 @@ export const fromOperationAST = (
   }
 
   throw new Error('Please provide named Operation query');
-
-  // TODO: implement.
 };

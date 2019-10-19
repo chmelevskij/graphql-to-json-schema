@@ -109,7 +109,7 @@ function getArgs({ args, name }: Args) {
 
   const properties = args.reduce((acc, { value , name: argName }) => {
     if(value.kind === 'Variable' ) {
-      acc[argName.value] = { "$ref": `#/definitions/${name}/properties/variables/properties/$${value.name.value}` }
+      acc[argName.value] = { "$ref": `#/properties/${name}/properties/variables/properties/$${value.name.value}` }
     }
     return acc;
   }, {} as any)
@@ -211,8 +211,7 @@ export const fromOperationAST = (
 
     return {
       $schema: 'http://json-schema.org/draft-06/schema#',
-      properties: {},
-      definitions: {
+      properties: {
         [name]: {
           type: 'object',
           properties: {
@@ -227,3 +226,4 @@ export const fromOperationAST = (
 
   throw new Error('Please provide named Operation query');
 };
+

@@ -396,7 +396,7 @@ function runTest(sdl: string, expectedSchema: JSONSchema6) {
     expect(validator.validateSchema(result)).toBe(true);
 }
 
-describe('fromGraphQLAST', () => {
+describe('fromOperationAST', () => {
     test('parses the primitive variables', () => {
 
         const primitivesVariables = `
@@ -415,7 +415,7 @@ describe('fromGraphQLAST', () => {
          */
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 removeRecipe: {
                     type: 'object',
                     properties: {
@@ -456,7 +456,7 @@ describe('fromGraphQLAST', () => {
 
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 removeRecipe: {
                     type: 'object',
                     properties: {
@@ -496,7 +496,7 @@ describe('fromGraphQLAST', () => {
 
         const simpleSelectionSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 A: {
                     type: 'object',
                     properties: {
@@ -531,7 +531,7 @@ describe('fromGraphQLAST', () => {
 
         const simpleSelectionSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 A: {
                     type: 'object',
                     properties: {
@@ -600,7 +600,7 @@ describe('fromGraphQLAST', () => {
 
         const simpleSelectionSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 A: {
                     type: 'object',
                     additionalProperties: false,
@@ -691,7 +691,7 @@ describe('fromGraphQLAST', () => {
 
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 removeRecipe: {
                     type: 'object',
                     properties: {
@@ -716,11 +716,11 @@ describe('fromGraphQLAST', () => {
                                         arguments: {
                                             type: "object",
                                             properties: {
-                                                a: { "$ref": "#/definitions/removeRecipe/properties/variables/properties/$a" },
-                                                b: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$b' },
-                                                c: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$c' },
-                                                d: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$d' },
-                                                e: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$e' }
+                                                a: { "$ref": "#/properties/removeRecipe/properties/variables/properties/$a" },
+                                                b: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$b' },
+                                                c: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$c' },
+                                                d: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$d' },
+                                                e: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$e' }
                                             },
                                             additionalProperties: false
                                         }
@@ -747,7 +747,7 @@ describe('fromGraphQLAST', () => {
 
         const primitivesVariablesSchema: GraphQLJSONSchema6 = {
             $schema: 'http://json-schema.org/draft-06/schema#',
-            definitions: {
+            properties: {
                 removeRecipe: {
                     type: 'object',
                     properties: {
@@ -772,11 +772,11 @@ describe('fromGraphQLAST', () => {
                                         arguments: {
                                             type: "object",
                                             properties: {
-                                                a: { "$ref": "#/definitions/removeRecipe/properties/variables/properties/$a" },
-                                                b: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$b' },
-                                                c: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$c' },
-                                                d: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$d' },
-                                                e: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$e' }
+                                                a: { "$ref": "#/properties/removeRecipe/properties/variables/properties/$a" },
+                                                b: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$b' },
+                                                c: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$c' },
+                                                d: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$d' },
+                                                e: { "$ref": '#/properties/removeRecipe/properties/variables/properties/$e' }
                                             },
                                             additionalProperties: false
                                         }

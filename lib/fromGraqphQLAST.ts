@@ -235,7 +235,7 @@ function getPropertyType(field: TypeNode): JSONSchema6 {
       };
 
     case 'NonNullType':
-      return {}; // TODO: handle required
+      return getPropertyType(field.type); // TODO: handle required
     
     case 'NamedType':
       const typeName = <GraphQLTypeNames>getName(field);
@@ -257,18 +257,29 @@ function fieldToProperty(acc: JSONSchema6["properties"], field: FieldDefinitionN
     ...acc,
     [getName(field)]: getPropertyType(field.type),
   }
-}
+};
+
+const getRequiredFields = (fields: ReadonlyArray<FieldDefinitionNode> = []): string[] =>
+  fields.reduce<string[]>((acc, field) => {
+    if (field.type.kind === 'NonNullType') {
+      return [...acc, getName(field)];
+    }
+    return acc
+  }, []);
 
 export const fromObjectTypeDefinition = (node: ObjectTypeDefinitionNode): GraphQLJSONSchema6 => {
   const properties = node.fields
     ? node.fields.reduce<JSONSchema6["properties"]>(fieldToProperty, {})
     : {};
 
+  const required = getRequiredFields(node.fields);
+
   return {
     $schema: 'http://json-schema.org/draft-06/schema#',
     definitions: {
       [getName(node)]: {
         properties,
+        required,
         type: 'object',
       }
     }

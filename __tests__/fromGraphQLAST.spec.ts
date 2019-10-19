@@ -835,7 +835,6 @@ describe('fromObjectTypeDefinition', () => {
         runObjectTest(sdl, expectedSchema);
     });
     test('list of scalars', () => {
-
         const sdl = `
         type H {
             a: [String]
@@ -857,6 +856,36 @@ describe('fromObjectTypeDefinition', () => {
                         d: { type: 'array', items: { type: 'boolean' } },
                         e: { type: 'array', items: { type: 'string' } },
                     }
+                }
+            }
+        }
+
+        runObjectTest(sdl, expectedSchema)
+    });
+
+    test('required fields', () => {
+        const sdl = `
+        type H {
+            a: String!
+            b: Int!
+            c: Float!
+            d: Boolean!
+            e: ID!
+        }`;
+
+        const expectedSchema: JSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                H: {
+                    type: 'object',
+                    properties: {
+                        a: { type: 'string' },
+                        b: { type: 'number' },
+                        c: { type: 'number' },
+                        d: { type: 'boolean' },
+                        e: { type: 'string' },
+                    },
+                    required: ['a', 'b', 'c', 'd', 'e'],
                 }
             }
         }

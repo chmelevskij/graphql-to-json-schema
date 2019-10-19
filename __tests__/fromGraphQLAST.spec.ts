@@ -834,4 +834,33 @@ describe('fromObjectTypeDefinition', () => {
 
         runObjectTest(sdl, expectedSchema);
     });
+    test('list of scalars', () => {
+
+        const sdl = `
+        type H {
+            a: [String]
+            b: [Int]
+            c: [Float]
+            d: [Boolean]
+            e: [ID]
+        }`;
+
+        const expectedSchema: JSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                H: {
+                    type: 'object',
+                    properties: {
+                        a: { type: 'array', items: { type: 'string' } },
+                        b: { type: 'array', items: { type: 'number' } },
+                        c: { type: 'array', items: { type: 'number' } },
+                        d: { type: 'array', items: { type: 'boolean' } },
+                        e: { type: 'array', items: { type: 'string' } },
+                    }
+                }
+            }
+        }
+
+        runObjectTest(sdl, expectedSchema)
+    });
 });

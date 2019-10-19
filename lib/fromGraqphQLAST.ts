@@ -226,10 +226,13 @@ export const fromOperationASTNode = (
 };
 
 // Inspired by https://github.com/jakubfiala/graphql-json-schema
-function getPropertyType(field: TypeNode) {
+function getPropertyType(field: TypeNode): JSONSchema6 {
   switch (field.kind) {
     case 'ListType':
-      return {};  // TODO: handle this
+      return {
+        type: 'array',
+        items: getPropertyType(field.type),
+      };
 
     case 'NonNullType':
       return {}; // TODO: handle required

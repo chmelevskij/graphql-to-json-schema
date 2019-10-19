@@ -894,7 +894,6 @@ describe('fromObjectTypeDefinition', () => {
     });
 
     test('handles references', () => {
-
         const sdl = `
         type H {
             t: T
@@ -912,8 +911,31 @@ describe('fromObjectTypeDefinition', () => {
                     required: [],
                 },
             }
-        }
+        };
 
-        runObjectTest(sdl, expectedSchema)
+        runObjectTest(sdl, expectedSchema);
+    });
+
+    test('handles list of object refs', () => {
+        const sdl = `
+        type H {
+            t: [T]
+        }
+        `;
+
+        const expectedSchema: JSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                H: {
+                    type: 'object',
+                    properties: {
+                        t: { type: 'array', items: { $ref: '#/definitions/T' } },
+                    },
+                    required: [],
+                },
+            },
+        };
+
+        runObjectTest(sdl, expectedSchema);
     });
 });

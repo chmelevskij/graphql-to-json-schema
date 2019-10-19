@@ -244,7 +244,7 @@ function getPropertyType(field: TypeNode): JSONSchema6 {
           type: typesMapping[typeName],
         }
       }
-      return {}
+      return { $ref: `#/definitions/${typeName}`};
   
     default:
       const n: never = field;

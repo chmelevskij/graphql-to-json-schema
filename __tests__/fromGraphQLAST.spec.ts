@@ -1,6 +1,6 @@
 import { parse } from 'graphql/language/parser';
 import { JSONSchema6 } from 'json-schema';
-import { fromOperationAST, GraphQLJSONSchema6 } from '../lib/fromGraqphQLAST';
+import { fromOperationASTNode, GraphQLJSONSchema6, fromObjectTypeDefinition } from '../lib/fromGraqphQLAST';
 
 /**
  * There are 2 main approaches to structuring the corresponding schema:
@@ -386,17 +386,27 @@ const mutatoinWithIdSchema: JSONSchema6 = {
 const printJSON = (v: any) => console.log(JSON.stringify(v, null, 2));
 
 import * as ajv from 'ajv';
+import { OperationDefinitionNode, ObjectTypeDefinitionNode } from 'graphql';
 
-function runTest(sdl: string, expectedSchema: JSONSchema6) {
-    const ast = parse(sdl);
-    const result = fromOperationAST(ast);
+function runTestOperationTest(sdl: string, expectedSchema: JSONSchema6) {
+    const ast = <OperationDefinitionNode>parse(sdl).definitions[0];
+    const result = fromOperationASTNode(ast);
     expect(result).toMatchObject(expectedSchema);
     const validator = new ajv();
     validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
     expect(validator.validateSchema(result)).toBe(true);
 }
 
-describe('fromOperationAST', () => {
+function runObjectTest(sdl: string, expectedSchema: JSONSchema6) {
+    const ast = <ObjectTypeDefinitionNode>parse(sdl).definitions[0];
+    const result = fromObjectTypeDefinition(ast);
+    expect(result).toMatchObject(expectedSchema);
+    const validator = new ajv();
+    validator.addMetaSchema(require('ajv/lib/refs/json-schema-draft-06.json'));
+    expect(validator.validateSchema(result)).toBe(true);
+}
+
+describe('fromOperationASTNode', () => {
     test('parses the primitive variables', () => {
 
         const primitivesVariables = `
@@ -443,7 +453,7 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(primitivesVariables, primitivesVariablesSchema)
+        runTestOperationTest(primitivesVariables, primitivesVariablesSchema)
     });
 
     test('parses the primitive variables with required variables', () => {
@@ -484,7 +494,7 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(primitivesVariables, primitivesVariablesSchema)
+        runTestOperationTest(primitivesVariables, primitivesVariablesSchema)
     });
 
     test('Parses selections without definitions', () => {
@@ -515,7 +525,7 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(simpleSelection, simpleSelectionSchema);
+        runTestOperationTest(simpleSelection, simpleSelectionSchema);
     });
 
     test('Nested selections recursivelly', () => {
@@ -578,7 +588,7 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(simpleSelection, simpleSelectionSchema)
+        runTestOperationTest(simpleSelection, simpleSelectionSchema)
     });
 
     test('Multiple Nested selections recursivelly', () => {
@@ -678,7 +688,7 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(simpleSelection, simpleSelectionSchema)
+        runTestOperationTest(simpleSelection, simpleSelectionSchema)
     });
 
     test('uses variable references in arguments', () => {
@@ -735,7 +745,7 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(primitivesVariables, primitivesVariablesSchema)
+        runTestOperationTest(primitivesVariables, primitivesVariablesSchema)
     });
 
     test('sets default values for variables', () => {
@@ -791,6 +801,37 @@ describe('fromOperationAST', () => {
             }
         };
 
-        runTest(primitivesVariables, primitivesVariablesSchema)
+        runTestOperationTest(primitivesVariables, primitivesVariablesSchema)
+    });
+});
+
+describe('fromObjectTypeDefinition', () => {
+    test('basic scalar types', () => {
+        const sdl = `
+        type H {
+            a: String
+            b: Int
+            c: Float
+            d: Boolean
+            e: ID
+        }`;
+
+        const expectedSchema: JSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                H: {
+                    type: 'object',
+                    properties: {
+                        a: { type: 'string' },
+                        b: { type: 'number' },
+                        c: { type: 'number' },
+                        d: { type: 'boolean' },
+                        e: { type: 'string' },
+                    }
+                }
+            }
+        }
+
+        runObjectTest(sdl, expectedSchema);
     });
 });

@@ -2,11 +2,9 @@
  * This takes in the AST generated from schema language. Examples of that would be
  * the output of `graphql-tag` or similar tools which would parse SDL.
  */
-import { DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode, ArgumentNode, VariableNode, IntValueNode, FloatValueNode, StringValueNode, BooleanValueNode, ValueNode } from 'graphql';
+import { NameNode , NamedTypeNode, DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode, ArgumentNode, VariableNode, IntValueNode, FloatValueNode, StringValueNode, BooleanValueNode, ValueNode, DefinitionNode, OperationDefinitionNode, ObjectTypeDefinitionNode, FieldDefinitionNode, TypeNode } from 'graphql';
 import { JSONSchema6 } from 'json-schema';
 import { GraphQLTypeNames, typesMapping } from './typesMapping';
-
-const a: JSONSchema6 = {};
 
 /**
  * Preliminary implementation for the GraphQL specific schema.
@@ -48,6 +46,7 @@ function isPrimitiveValueNode(node?: ValueNode): node is PrimitiveValueNode {
   return false;
 }
 
+const getName = <T extends { name: NameNode }>(node: T): string => node.name.value;
 
 function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
 
@@ -66,8 +65,8 @@ function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
     switch (v.type.kind) {
       // TODO: rescursive search for definitions
       case 'NamedType':
-        acc[`$${v.variable.name.value}`] = {
-          type: typesMapping[<GraphQLTypeNames>v.type.name.value],
+        acc[`$${getName(v.variable)}`] = {
+          type: typesMapping[<GraphQLTypeNames>getName(v.type)],
           ...(isPrimitiveValueNode(v.defaultValue) && { default: v.defaultValue.value }),
         };
         return acc;
@@ -75,14 +74,14 @@ function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
         return acc;
       case 'NonNullType':
         if (v.type.type.kind === 'NamedType') {
-          acc[`$${v.variable.name.value}`] = {
+          acc[`$${getName(v.variable)}`] = {
             type:
               typesMapping[
-              <GraphQLTypeNames>v.type.type.name.value
+              <GraphQLTypeNames>getName(v.type.type)
               ]
           };
         }
-        variables.required!.push(`$${v.variable.name.value}`);
+        variables.required!.push(`$${getName(v.variable)}`);
         return acc;
       default:
         const exhaustive: never = v.type;
@@ -109,7 +108,7 @@ function getArgs({ args, name }: Args) {
 
   const properties = args.reduce((acc, { value , name: argName }) => {
     if(value.kind === 'Variable' ) {
-      acc[argName.value] = { "$ref": `#/properties/${name}/properties/variables/properties/$${value.name.value}` }
+      acc[argName.value] = { "$ref": `#/properties/${name}/properties/variables/properties/$${getName(value)}` }
     }
     return acc;
   }, {} as any)
@@ -124,10 +123,9 @@ function getSelectionTree({ selectionSet, name }: NamedMemo, schemaMemo: any = {
       case 'Field':
         let result = {};
         if (!selection.selectionSet && (selection.arguments && selection.arguments.length === 0)) {
-          acc[selection.name.value] = result
+          acc[getName(selection)] = result
           return acc;
         }
-
 
         let args = {};
         let selections = {};
@@ -147,7 +145,7 @@ function getSelectionTree({ selectionSet, name }: NamedMemo, schemaMemo: any = {
           }
         }
 
-        acc[selection.name.value] = {
+        acc[getName(selection)] = {
           type: 'object',
           additionalProperties: false,
           required: [],
@@ -190,17 +188,17 @@ function getSelections({ selectionSet, name }: NamedMemo) {
   };
 
 }
+
 /**
  * Given `DocumentNode` used in client generate schema. 
- * @param documentNode parsed graphql query or mutation from SDL
+ * @param ASTNode parsed graphql query or mutation from SDL
  */
-export const fromOperationAST = (
-  documentNode: DocumentNode
+export const fromOperationASTNode = (
+  ASTNode: OperationDefinitionNode,
 ): GraphQLJSONSchema6 => {
-  const ASTNode = documentNode.definitions[0];
 
   // name can be undefined. Since graphql supports unnamed ones
-  if (ASTNode.kind === 'OperationDefinition' && ASTNode.name) {
+  if (ASTNode.name) {
     const name = ASTNode.name.value;
     let variables = {};
     if (ASTNode.variableDefinitions) {
@@ -227,3 +225,49 @@ export const fromOperationAST = (
   throw new Error('Please provide named Operation query');
 };
 
+// Inspired by https://github.com/jakubfiala/graphql-json-schema
+function getPropertyType(field: TypeNode) {
+  switch (field.kind) {
+    case 'ListType':
+      return {};  // TODO: handle this
+
+    case 'NonNullType':
+      return {}; // TODO: handle required
+    
+    case 'NamedType':
+      const typeName = <GraphQLTypeNames>getName(field);
+      if(typeName in typesMapping) {
+        return {
+          type: typesMapping[typeName],
+        }
+      }
+      return {}
+  
+    default:
+      const n: never = field;
+      return n;
+  }
+}
+
+function fieldToProperty(acc: JSONSchema6["properties"], field: FieldDefinitionNode): JSONSchema6['properties'] {
+  return {
+    ...acc,
+    [getName(field)]: getPropertyType(field.type),
+  }
+}
+
+export const fromObjectTypeDefinition = (node: ObjectTypeDefinitionNode): GraphQLJSONSchema6 => {
+  const properties = node.fields
+    ? node.fields.reduce<JSONSchema6["properties"]>(fieldToProperty, {})
+    : {};
+
+  return {
+    $schema: 'http://json-schema.org/draft-06/schema#',
+    definitions: {
+      [getName(node)]: {
+        properties,
+        type: 'object',
+      }
+    }
+  };
+}

@@ -2,7 +2,7 @@
  * This takes in the AST generated from schema language. Examples of that would be
  * the output of `graphql-tag` or similar tools which would parse SDL.
  */
-import { DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode, ArgumentNode } from 'graphql';
+import { DocumentNode, SelectionNode, SelectionSetNode, VariableDefinitionNode, ArgumentNode, VariableNode, IntValueNode, FloatValueNode, StringValueNode, BooleanValueNode, ValueNode } from 'graphql';
 import { JSONSchema6 } from 'json-schema';
 import { GraphQLTypeNames, typesMapping } from './typesMapping';
 
@@ -35,6 +35,20 @@ interface NamedMemo {
   selectionSet: SelectionSetNode;
 }
 
+type PrimitiveValueNode =
+| IntValueNode
+| FloatValueNode
+| StringValueNode
+| BooleanValueNode;
+
+
+function isPrimitiveValueNode(node?: ValueNode): node is PrimitiveValueNode {
+  if(node === undefined) return false;
+  if('value' in node) return true;
+  return false;
+}
+
+
 function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
 
   const variables: JSONSchema6 = {
@@ -53,7 +67,8 @@ function getVariables(variableDefinitions: readonly VariableDefinitionNode[]) {
       // TODO: rescursive search for definitions
       case 'NamedType':
         acc[`$${v.variable.name.value}`] = {
-          type: typesMapping[<GraphQLTypeNames>v.type.name.value]
+          type: typesMapping[<GraphQLTypeNames>v.type.name.value],
+          ...(isPrimitiveValueNode(v.defaultValue) && { default: v.defaultValue.value }),
         };
         return acc;
       case 'ListType':
@@ -202,7 +217,7 @@ export const fromOperationAST = (
           type: 'object',
           properties: {
             variables,
-            selections, // TODO: this matches anything atm
+            selections,
           },
           additionalProperties: false,
         }

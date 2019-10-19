@@ -737,4 +737,60 @@ describe('fromGraphQLAST', () => {
 
         runTest(primitivesVariables, primitivesVariablesSchema)
     });
+
+    test('sets default values for variables', () => {
+        const primitivesVariables = `
+        mutation removeRecipe($a: String = "iama", $b: Int = 1, $c: Float = 1.2, $d: Boolean = true, $e: ID = "iamid"){
+            miau(a: $a, b: $b, c: $c, d: $d, e: $e)
+        }
+        `;
+
+        const primitivesVariablesSchema: GraphQLJSONSchema6 = {
+            $schema: 'http://json-schema.org/draft-06/schema#',
+            definitions: {
+                removeRecipe: {
+                    type: 'object',
+                    properties: {
+                        variables: {
+                            type: 'object',
+                            properties: {
+                                $a: { type: 'string', default: 'iama' },
+                                $b: { type: 'number', default: '1' },
+                                $c: { type: 'number', default: '1.2' },
+                                $d: { type: 'boolean', default: true },
+                                $e: { type: 'string', default: 'iamid' }
+                            },
+                            additionalProperties: false,
+                            required: []
+                        },
+                        selections: {
+                            type: 'object',
+                            properties: {
+                                miau: {
+                                    type: "object",
+                                    properties: {
+                                        arguments: {
+                                            type: "object",
+                                            properties: {
+                                                a: { "$ref": "#/definitions/removeRecipe/properties/variables/properties/$a" },
+                                                b: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$b' },
+                                                c: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$c' },
+                                                d: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$d' },
+                                                e: { "$ref": '#/definitions/removeRecipe/properties/variables/properties/$e' }
+                                            },
+                                            additionalProperties: false
+                                        }
+                                    }
+
+                                },
+                            },
+                            additionalProperties: false,
+                        }
+                    }
+                }
+            }
+        };
+
+        runTest(primitivesVariables, primitivesVariablesSchema)
+    });
 });
